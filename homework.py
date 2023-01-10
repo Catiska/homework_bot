@@ -28,12 +28,12 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    """Проверка наличия токенов"""
+    """Проверка наличия токенов."""
     return all([TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, PRACTICUM_TOKEN])
 
 
 def send_message(bot, message):
-    """Отправляет сообщение в чат"""
+    """Отправляет сообщение в чат."""
     try:
         logging.debug('Отправляем сообщение')
         bot.send_message(
@@ -49,7 +49,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    """Получение ответа о статусе домашки"""
+    """Получение ответа о статусе домашки."""
     timestamp = int(time.time())
     params_request = {
         'url': ENDPOINT,
@@ -71,7 +71,7 @@ def get_api_answer(timestamp):
 
 
 def check_response(response):
-    """Проверка ответа"""
+    """Проверка ответа."""
     logging.info('Проверка ответа')
     if not isinstance(response, dict):
         raise TypeError('Ответ API не является dict')
@@ -84,7 +84,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Статус проверки домашки"""
+    """Статус проверки домашки."""
     if 'homework_name' not in homework:
         raise KeyError('В ответе отсутствует homework_name')
     homework_name = homework.get('homework_name')
