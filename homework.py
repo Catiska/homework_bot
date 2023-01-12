@@ -45,7 +45,7 @@ def send_message(bot, message):
         raise exceptions.TelegramError(
             f'Не удалось отправить сообщение - {error}')
     else:
-        logging.info(f'Сообщение отправлено - {message}')
+        logging.info(f'Сообщение отправлено {message}')
 
 
 def get_api_answer(timestamp):
@@ -65,9 +65,17 @@ def get_api_answer(timestamp):
         if homework_statuses.status_code != HTTPStatus.OK:
             raise exceptions.AccessDenied('Не удалось получить ответ API')
         return homework_statuses.json()
-    except Exception:
-        raise exceptions.AccessDenied(
-            'Нет доступа к запрашиваемой информации.')
+    except Exception as error:
+        raise ConnectionError(
+            (
+                'Во время подключения к эндпоинту {url} произошла'
+                ' непредвиденная ошибка: {error}'
+                ' headers = {headers}; params = {params};'
+            ).format(
+                error=error,
+                **params_request
+            )
+        ) from error
 
 
 def check_response(response):
@@ -106,8 +114,11 @@ def main():
     timestamp = int(time.time())
     start_message = 'Привет! Сейчас проверю, что там у нас'
     send_message(bot, start_message)
-    logging.basicConfig()
-    previous_message = ''
+    current_report = {
+        'name': '',
+        'output': ''
+    }
+    prev_report = current_report.copy()
 
     while True:
         try:
@@ -118,25 +129,35 @@ def main():
             homeworks = check_response(response)
             if homeworks:
                 message = parse_status(homeworks[0])
-            else:
-                message = 'Пока никаких новостей'
-
-            if message != previous_message:
+                homework = homeworks[0]
+                current_report['name'] = homework.get('homework_name')
+                current_report['output'] = homework.get('status')
                 send_message(bot, message)
-                previous_message = message
             else:
-                logging.info(message)
+                current_report['output'] = 'Нет изменений, ' \
+                                           'кроме дурацкой запятой'
+
+            if current_report != prev_report:
+                message = f"{current_report['name']}, " \
+                          f"{current_report['output']}"
+                send_message(bot, message)
+                prev_report = current_report.copy()
+            else:
+                logging.info('Нет изменений статуса проверки')
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message, exc_info=True)
-            if message != previous_message:
-                send_message(bot, message)
-                previous_message = message
+            current_report['output'] = message
+            if current_report != prev_report:
+                prev_report = current_report.copy()
 
         finally:
             time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO)
     main()
