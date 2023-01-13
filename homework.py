@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from http import HTTPStatus
+from typing import Dict
 
 import requests
 import telegram
@@ -12,15 +13,15 @@ import exceptions
 
 load_dotenv()
 
-PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+PRACTICUM_TOKEN: str = os.getenv('PRACTICUM_TOKEN')
+TELEGRAM_TOKEN: str = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID: int = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
+RETRY_PERIOD: int = 600
+ENDPOINT: str = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
+HEADERS: Dict = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-HOMEWORK_VERDICTS = {
+HOMEWORK_VERDICTS: Dict = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -85,7 +86,7 @@ def check_response(response):
         raise TypeError('Ответ API не является dict')
     if 'homeworks' not in response or 'current_date' not in response:
         raise exceptions.EmptyResponseFromAPI('Пустой ответ API')
-    homeworks = response.get('homeworks')
+    homeworks: list = response.get('homeworks')
     if not isinstance(homeworks, list):
         raise TypeError('homeworks не является списком')
     return homeworks
@@ -95,12 +96,12 @@ def parse_status(homework):
     """Статус проверки домашки."""
     if 'homework_name' not in homework:
         raise KeyError('В ответе отсутствует homework_name')
-    homework_name = homework.get('homework_name')
-    homework_status = homework.get('status')
+    homework_name: str = homework.get('homework_name')
+    homework_status: str = homework.get('status')
     if homework_status not in HOMEWORK_VERDICTS:
         logging.error(f'Неизвестный статус работы - {homework_status}')
         raise ValueError(f'Неизвестный статус работы - {homework_status}')
-    verdict = HOMEWORK_VERDICTS[homework_status]
+    verdict: str = HOMEWORK_VERDICTS[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -111,35 +112,35 @@ def main():
         sys.exit('Отсутствуют необходимые переменные окружения')
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time())
-    start_message = 'Привет! Сейчас проверю, что там у нас'
+    timestamp: int = int(time.time())
+    start_message: str = 'Привет! Сейчас проверю, что там у нас'
     send_message(bot, start_message)
-    current_report = {
+    current_report: Dict = {
         'name': '',
         'output': ''
     }
-    prev_report = current_report.copy()
+    prev_report: Dict = current_report.copy()
 
     while True:
         try:
-            response = get_api_answer(timestamp)
+            response: Dict = get_api_answer(timestamp)
             timestamp = response.get(
                 'current_date', int(time.time())
             )
             homeworks = check_response(response)
             if homeworks:
                 message = parse_status(homeworks[0])
-                homework = homeworks[0]
+                homework: Dict = homeworks[0]
                 current_report['name'] = homework.get('homework_name')
                 current_report['output'] = homework.get('status')
                 send_message(bot, message)
             else:
-                current_report['output'] = 'Нет изменений, ' \
-                                           'кроме дурацкой запятой'
+                current_report['name'] = 'Пусто'
+                current_report['output'] = 'Нет изменений.'
 
             if current_report != prev_report:
-                message = f"{current_report['name']}, " \
-                          f"{current_report['output']}"
+                message = (f"{current_report['name']}, "
+                           f"{current_report['output']}")
                 send_message(bot, message)
                 prev_report = current_report.copy()
             else:
@@ -148,6 +149,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message, exc_info=True)
+            send_message(bot, message)
             current_report['output'] = message
             if current_report != prev_report:
                 prev_report = current_report.copy()
