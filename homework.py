@@ -151,9 +151,9 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message, exc_info=True)
-            send_message(bot, message)
             current_report['output'] = message
             if current_report != prev_report:
+                send_message(bot, message)
                 prev_report = current_report.copy()
 
         finally:
