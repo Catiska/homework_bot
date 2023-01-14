@@ -11,3 +11,8 @@ class AccessDenied(Exception):
 class EmptyResponseFromAPI(Exception):
     """Пустой ответ API"""
     pass
+
+
+class SendingError(Exception):
+    """Ошибка отправки"""
+    pass

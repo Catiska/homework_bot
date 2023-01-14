@@ -146,6 +146,8 @@ def main():
             else:
                 logging.info('Нет изменений статуса проверки')
 
+        except exceptions.SendingError as error:
+            logging.error(error)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message, exc_info=True)
