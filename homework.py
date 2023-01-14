@@ -146,7 +146,7 @@ def main():
             else:
                 logging.info('Нет изменений статуса проверки')
 
-        except exceptions.SendingError as error:
+        except exceptions.TelegramError as error:
             logging.error(error)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
